@@ -126,7 +126,7 @@ type RelationsIndex struct {
 
 - [x] Project initialised — `go.mod` created
 - [x] Data models defined — structs for Artist, Location, Date, Relation
-- [ ] API client — fetch and cache data from the external API
+- [x] API client — fetch and cache data from the external API
 - [ ] HTTP handlers — serve pages and handle the client-server event
 - [ ] Templates — HTML pages for homepage, artist detail, and errors
 - [ ] Server — routing and entry point
