@@ -22,6 +22,115 @@ Groupie Trackers is a project that consists of receiving a given API and manipul
 - Only **standard Go packages** are allowed
 - The server must handle errors correctly and never crash
 
+## The API
+
+Base URL: `https://groupietrackers.herokuapp.com/api`
+
+| Endpoint | Returns |
+|---|---|
+| `/artists` | Array of artist objects |
+| `/locations` | `{ "index": [ ... ] }` |
+| `/dates` | `{ "index": [ ... ] }` |
+| `/relation` | `{ "index": [ ... ] }` |
+
+### Sample API responses
+
+**`/artists[0]`**
+```json
+{
+  "id": 1,
+  "image": "https://groupietrackers.herokuapp.com/api/images/queen.jpeg",
+  "name": "Queen",
+  "members": ["Freddie Mercury", "Brian May", "John Daecon", "Roger Meddows-Taylor", "Mike Grose", "Barry Mitchell", "Doug Fogie"],
+  "creationDate": 1970,
+  "firstAlbum": "14-12-1973",
+  "locations": "https://groupietrackers.herokuapp.com/api/locations/1",
+  "concertDates": "https://groupietrackers.herokuapp.com/api/dates/1",
+  "relations": "https://groupietrackers.herokuapp.com/api/relation/1"
+}
+```
+
+**`/locations index[0]`**
+```json
+{
+  "id": 1,
+  "locations": ["north_carolina-usa", "georgia-usa", "los_angeles-usa", "saitama-japan"],
+  "dates": "https://groupietrackers.herokuapp.com/api/dates/1"
+}
+```
+
+**`/dates index[0]`**
+```json
+{
+  "id": 1,
+  "dates": ["*23-08-2019", "*22-08-2019", "*20-08-2019"]
+}
+```
+
+**`/relation index[0]`**
+```json
+{
+  "id": 1,
+  "datesLocations": {
+    "georgia-usa": ["22-08-2019"],
+    "los_angeles-usa": ["20-08-2019"]
+  }
+}
+```
+
+## Data Models
+
+```go
+type Artist struct {
+    ID           int      `json:"id"`
+    Image        string   `json:"image"`
+    Name         string   `json:"name"`
+    Members      []string `json:"members"`
+    CreationDate int      `json:"creationDate"`
+    FirstAlbum   string   `json:"firstAlbum"`
+    Locations    string   `json:"locations"`
+    ConcertDates string   `json:"concertDates"`
+    Relations    string   `json:"relations"`
+}
+
+type Location struct {
+    ID        int      `json:"id"`
+    Locations []string `json:"locations"`
+    Dates     string   `json:"dates"`
+}
+
+type LocationsIndex struct {
+    Index []Location `json:"index"`
+}
+
+type Date struct {
+    ID    int      `json:"id"`
+    Dates []string `json:"dates"`
+}
+
+type DatesIndex struct {
+    Index []Date `json:"index"`
+}
+
+type Relation struct {
+    ID             int                 `json:"id"`
+    DatesLocations map[string][]string `json:"datesLocations"`
+}
+
+type RelationsIndex struct {
+    Index []Relation `json:"index"`
+}
+```
+
+## Progress
+
+- [x] Project initialised — `go.mod` created
+- [x] Data models defined — structs for Artist, Location, Date, Relation
+- [ ] API client — fetch and cache data from the external API
+- [ ] HTTP handlers — serve pages and handle the client-server event
+- [ ] Templates — HTML pages for homepage, artist detail, and errors
+- [ ] Server — routing and entry point
+
 ## Usage
 
 ```bash
