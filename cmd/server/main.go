@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"groupie-tracker/internal/api"
 )
 
 func main() {
@@ -25,5 +27,15 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "405 - Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	fmt.Fprintln(w, "Server is running")
+
+	artists, err := api.GetArtists()
+	if err != nil {
+		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error fetching artists:", err)
+		return
+	}
+
+	for _, artist := range artists {
+		fmt.Fprintf(w, "%s (since %d)\n", artist.Name, artist.CreationDate)
+	}
 }
