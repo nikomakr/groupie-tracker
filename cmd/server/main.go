@@ -1,12 +1,17 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 
 	"groupie-tracker/internal/api"
+	"groupie-tracker/internal/models"
 )
+
+type PageData struct {
+	Artists []models.Artist
+}
 
 func main() {
 	mux := http.NewServeMux()
@@ -35,7 +40,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, artist := range artists {
-		fmt.Fprintf(w, "%s (since %d)\n", artist.Name, artist.CreationDate)
+	tmpl, err := template.ParseFiles("templates/index.html")
+	if err != nil {
+		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error parsing template:", err)
+		return
 	}
+
+	data := PageData{Artists: artists}
+	tmpl.Execute(w, data)
 }
