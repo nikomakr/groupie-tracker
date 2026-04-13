@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Artist.Name }}</title>
+</head>
+<body>
+    <a href="/">← Back</a>
+
+    <h1>{{ .Artist.Name }}</h1>
+    <img src="{{ .Artist.Image }}" alt="{{ .Artist.Name }}" width="200">
+
+    <h2>Info</h2>
+    <p>Founded: {{ .Artist.CreationDate }}</p>
+    <p>First Album: {{ .Artist.FirstAlbum }}</p>
+
+    <h2>Members</h2>
+    <ul>
+        {{ range .Artist.Members }}
+        <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+
+    <h2>Locations</h2>
+    <ul>
+        {{ range .Location.Locations }}
+        <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+
+    <h2>Concert Dates</h2>
+    <ul>
+        {{ range .Date.Dates }}
+        <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+
+    <h2>Dates by Location</h2>
+    <ul>
+        {{ range $location, $dates := .Relation.DatesLocations }}
+        <li>{{ $location }}: {{ range $dates }}{{ . }} {{ end }}</li>
+        {{ end }}
+    </ul>
+</body>
+</html>
