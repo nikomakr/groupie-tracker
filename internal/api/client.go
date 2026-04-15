@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"time"
+	"strings"
 
 	"groupie-tracker/internal/models"
 )
@@ -88,4 +89,8 @@ func GetRelations() (models.RelationsIndex, error) {
 		return models.RelationsIndex{}, fmt.Errorf("decoding relations: %w", err)
 	}
 	return relations, nil
+}
+
+func Contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

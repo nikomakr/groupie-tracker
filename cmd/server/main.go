@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"groupie-tracker/internal/api"
 	"groupie-tracker/internal/models"
@@ -36,6 +35,7 @@ func main() {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("indexHandler called")
 	if r.URL.Path != "/" {
 		http.Error(w, "404 - Page Not Found", http.StatusNotFound)
 		return
@@ -60,7 +60,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := PageData{Artists: artists}
-	tmpl.Execute(w, data)
+	if err := tmpl.Execute(w, data); err != nil {
+    	log.Println("Template execute error:", err)
+	}
+
+	log.Println("Artists in data:", len(data.Artists))
 }
 
 func artistHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,10 +87,11 @@ func artistHandler(w http.ResponseWriter, r *http.Request) {
 
 	artists, err := api.GetArtists()
 	if err != nil {
-		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error fetching artists:", err)
-		return
+    http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
+    log.Println("Error fetching artists:", err)
+    return
 	}
+	log.Println("Artists count:", len(artists))
 
 	locations, err := api.GetLocations()
 	if err != nil {
@@ -182,12 +187,12 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	var results []models.Artist
 	for _, a := range artists {
-		if contains(a.Name, query) {
+		if api.Contains(a.Name, query) {
 			results = append(results, a)
 			continue
 		}
 		for _, m := range a.Members {
-			if contains(m, query) {
+			if api.Contains(m, query) {
 				results = append(results, a)
 				break
 			}
@@ -196,8 +201,4 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
-}
-
-func contains(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
