@@ -7,13 +7,49 @@
 </head>
 <body>
     <h1>Groupie Trackers</h1>
+
+    <input type="text" id="search" placeholder="Search artists or members..." />
+    <ul id="results"></ul>
+
     <ul>
         {{ range .Artists }}
         <li>
-            <img src="{{ .Image }}" alt="{{ .Name }}" width="100">
-            <strong>{{ .Name }}</strong> — since {{ .CreationDate }}
+            <a href="/artist?id={{ .ID }}">
+                <img src="{{ .Image }}" alt="{{ .Name }}" width="100">
+                <strong>{{ .Name }}</strong> — since {{ .CreationDate }}
+            </a>
         </li>
         {{ end }}
     </ul>
+
+<script>
+    const input = document.getElementById('search');
+    const results = document.getElementById('results');
+
+    input.addEventListener('input', function() {
+        const query = input.value.trim();
+        if (!query) {
+            results.innerHTML = '';
+            return;
+        }
+
+        fetch('/search?q=' + encodeURIComponent(query))
+            .then(r => r.json())
+            .then(artists => {
+                if (!artists || artists.length === 0) {
+                    results.innerHTML = '<li>No results</li>';
+                    return;
+                }
+                results.innerHTML = artists.map(a =>
+                    `<li>
+                        <a href="/artist?id=${a.id}">
+                            <img src="${a.image}" alt="${a.name}" width="100">
+                            <strong>${a.name}</strong> — since ${a.creationDate}
+                        </a>
+                    </li>`
+                ).join('');
+            });
+    });
+</script>
 </body>
 </html>

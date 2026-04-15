@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"groupie-tracker/internal/api"
 	"groupie-tracker/internal/models"
@@ -25,6 +27,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/artist", artistHandler)
+	mux.HandleFunc("/search", searchHandler)
 
 	log.Println("Server running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
@@ -156,4 +159,45 @@ func artistHandler(w http.ResponseWriter, r *http.Request) {
 		Relation: relation,
 	}
 	tmpl.Execute(w, data)
+}
+
+func searchHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "405 - Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Error(w, "400 - Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	artists, err := api.GetArtists()
+	if err != nil {
+		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error fetching artists:", err)
+		return
+	}
+
+	var results []models.Artist
+	for _, a := range artists {
+		if contains(a.Name, query) {
+			results = append(results, a)
+			continue
+		}
+		for _, m := range a.Members {
+			if contains(m, query) {
+				results = append(results, a)
+				break
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
