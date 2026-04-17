@@ -122,22 +122,79 @@ type RelationsIndex struct {
 }
 ```
 
+## API Client
+
+The `internal/api` package exposes four functions, one per endpoint:
+
+```go
+api.GetArtists()   // returns []models.Artist
+api.GetLocations() // returns models.LocationsIndex
+api.GetDates()     // returns models.DatesIndex
+api.GetRelations() // returns models.RelationsIndex
+```
+
+Each function makes a GET request, reads the response body, unmarshals the JSON into the corresponding struct, and returns the data or an error.
+
+## Client-Server Event — Live Search
+
+The search bar on the homepage is the implemented client-server event.
+
+**Flow:**
+1. User types in the search input (keyboard event)
+2. Browser sends `GET /search?q=<query>` to the Go server
+3. Server searches all artists by name and members (case-insensitive)
+4. Server responds with JSON array of matching artists
+5. Browser renders results as a dropdown — no page reload
+
+**Why this qualifies as a client-server event:**
+The client (browser) triggers an action (typing), which sends a request to the server, the server processes it and responds with data, and the client renders that data — a full request-response cycle.
+
+## Pages
+
+| Route | Description |
+|---|---|
+| `/` | Homepage — artist card grid |
+| `/artist?id=N` | Artist detail — members, dates, locations, dates by location table |
+| `/search?q=query` | JSON endpoint — returns matching artists |
+
+## Error Handling
+
+| Status | Trigger |
+|---|---|
+| `400` | Missing or invalid query parameter |
+| `404` | Unknown route or artist ID not found |
+| `405` | Wrong HTTP method |
+| `500` | API fetch failure or template error |
+
 ## Progress
 
 - [x] Project initialised — `go.mod` created
 - [x] Data models defined — structs for Artist, Location, Date, Relation
-- [x] API client — fetch and cache data from the external API
-- [ ] HTTP handlers — serve pages and handle the client-server event
-- [ ] Templates — HTML pages for homepage, artist detail, and errors
-- [ ] Server — routing and entry point
+- [x] API client — all four endpoints fetched and verified
+- [x] HTTP server — routing, handlers, error handling
+- [x] Homepage — artist card grid with dark theme
+- [x] Artist detail page — members, dates, locations, relation table
+- [x] Client-server event — live search via `/search?q=`
+- [x] Unit tests — `Contains` function tested
+- [x] Refactor handlers into `internal/handlers` package
 
 ## Usage
 
 ```bash
-go run .
+go run cmd/server/main.go
 ```
 
 Visit `http://localhost:8080`
+
+## Run Tests
+
+```bash
+go test ./internal/api/... -v
+```
+
+## Allowed Packages
+
+Only Go standard library. No external dependencies. Verified via `go.mod`.
 
 ## Learning Outcomes
 
