@@ -70,31 +70,10 @@ func ArtistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	artists, err := api.GetArtists()
+	artists, locations, dates, relations, err := api.GetAllData()
 	if err != nil {
 		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error fetching artists:", err)
-		return
-	}
-
-	locations, err := api.GetLocations()
-	if err != nil {
-		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error fetching locations:", err)
-		return
-	}
-
-	dates, err := api.GetDates()
-	if err != nil {
-		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error fetching dates:", err)
-		return
-	}
-
-	relations, err := api.GetRelations()
-	if err != nil {
-		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error fetching relations:", err)
+		log.Println("Error fetching data:", err)
 		return
 	}
 

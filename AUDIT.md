@@ -217,6 +217,16 @@ Yes. Two patterns:
 1. Server-side rendering — Go templates render full HTML on request
 2. AJAX — `/search` returns `Content-Type: application/json` consumed by `fetch()` in the browser
 
+Run this to prove both patterns:
+
+Pattern 1 — server-side rendering:
+bashcurl -s http://localhost:8080 | grep "<title>"
+Should return <title>Groupie Trackers</title> — full HTML rendered by the server.
+Pattern 2 — AJAX JSON response:
+bashcurl -s "http://localhost:8080/search?q=queen"
+Should return a JSON array — consumed by fetch() in the browser without a page reload.
+Both prove the server is communicating correctly with the client in two different ways.
+
 
 ### Does the server present all needed handlers and patterns?
 Yes. Three handlers registered in `main()`:
@@ -224,30 +234,87 @@ Yes. Three handlers registered in `main()`:
 - `ArtistHandler` — serves the artist detail page
 - `SearchHandler` — handles the client-server event
 
----
 
 ## General
 
 ### Does the event system run asynchronously?
-The search event is triggered asynchronously from the browser via `fetch()` — it does not block the page. On the server side, each HTTP request is handled in its own goroutine by Go's `net/http` package automatically.
+Yes. Explicitly implemented with goroutines and `sync.WaitGroup`.
 
----
+When the artist detail page is requested, all four API endpoints are fetched concurrently:
+```go
+wg.Add(4)
+
+go func() { defer wg.Done(); errs[0] = fetchJSON(baseURL+"/artists", &artists) }()
+go func() { defer wg.Done(); errs[1] = fetchJSON(baseURL+"/locations", &locations) }()
+go func() { defer wg.Done(); errs[2] = fetchJSON(baseURL+"/dates", &dates) }()
+go func() { defer wg.Done(); errs[3] = fetchJSON(baseURL+"/relation", &relations) }()
+
+wg.Wait()
+```
+
+All four goroutines run in parallel. `wg.Wait()` blocks until all four finish. This means the page loads in the time of the slowest single request, not the sum of all four.
+
+On the client side, the search event uses `fetch()` which is non-blocking — the browser sends the request and continues running without freezing the page.
+
 
 ## Basic
 
 ### Does the project run quickly and effectively?
-Yes. The API client uses a 15-second timeout. Each handler fetches only what it needs. No unnecessary data requests.
+Yes. Two things prove it:
 
----
+**1. Concurrent fetching on the artist detail page**
+
+All four API endpoints are fetched in parallel using goroutines. Instead of waiting for each one sequentially, they all run at the same time. The page loads in the time of the slowest single request, not the sum of all four.
+
+**2. 15-second timeout on the HTTP client**
+```go
+var httpClient = &http.Client{Timeout: 15 * time.Second}
+```
+
+If the upstream API hangs, the server gives up after 15 seconds and returns a 500 instead of waiting forever.
+
+To prove the speed, time the artist detail page:
+```bash
+time curl -s "http://localhost:8080/artist?id=1" > /dev/null
+```
+
+You should see a response in under 1 second.
+
 
 ### Does the code obey good practices?
-Yes:
-- Packages separated by responsibility: `models`, `api`, `handlers`
-- Errors are always handled and never silently ignored
-- Exported vs unexported identifiers used correctly
-- `main.go` only contains server setup and routing
+Yes. Four areas demonstrate this:
 
----
+**1. Packages separated by responsibility**
+- `internal/models` — data structures only, no logic
+- `internal/api` — all external API communication
+- `internal/handlers` — all HTTP request handling
+- `cmd/server/main.go` — server setup and routing only
+
+**2. Errors are always handled**
+No error is silently ignored. Every function returns an error and every caller checks it:
+```go
+artists, err := api.GetArtists()
+if err != nil {
+    http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
+    log.Println("Error fetching artists:", err)
+    return
+}
+```
+
+**3. Exported vs unexported identifiers used correctly**
+- `Contains` is exported — used by both `handlers` and `client_test.go`
+- `fetchJSON` is unexported — internal helper, not needed outside `api` package
+
+**4. HTTP timeouts configured**
+Both the HTTP client (15s) and all error paths are handled so the server never hangs or crashes.
+
+Verify with:
+```bash
+go build ./...
+go test ./internal/api/... -v
+```
+Zero errors and passing tests confirm the code is clean.
+
 
 ### Is there a test file?
 Yes. `internal/api/client_test.go` contains unit tests for the `Contains` function. Run with:
@@ -260,10 +327,35 @@ go test ./internal/api/... -v
 ## Social
 
 ### Did you learn anything from this project?
-This project covers: consuming a REST API in Go, working with JSON, rendering HTML with `html/template`, creating client-server events using `fetch()` and a Go JSON endpoint, and structuring a Go web application cleanly.
+Yes. This project covered:
+
+- **Consuming a REST API in Go** — making HTTP GET requests, reading response bodies, handling timeouts
+- **JSON** — unmarshaling API responses into typed Go structs using `json` tags
+- **HTML templating** — rendering dynamic pages with `html/template`, passing data from Go into HTML
+- **Client-server events** — triggering a server request from the browser using `fetch()` and handling the JSON response without a page reload
+- **Concurrency** — fetching multiple API endpoints in parallel using goroutines and `sync.WaitGroup`
+- **Error handling** — returning correct HTTP status codes (400, 404, 405, 500) and never crashing the server
+- **Package structure** — separating concerns into `models`, `api`, `handlers` and keeping `main.go` clean
+- **Go tooling** — `go mod init`, `go build`, `go run`, `go test`
 
 ### Can it be open-sourced / used for other purposes?
-Yes. The structure — API client, handlers, models, templates — is a clean starting point for any Go web application that consumes and displays external API data.
+Yes. The structure is generic enough to be reused for any Go web application that consumes an external API. Specifically:
+
+- `internal/models` — swap the structs for any API schema
+- `internal/api` — swap the endpoints for any REST API
+- `internal/handlers` — the error handling and routing pattern applies to any project
+- `templates/` — the dark theme and card grid layout can be reused for any data display
+
+The concurrent fetching pattern with goroutines and `sync.WaitGroup` is directly reusable in any Go project that needs to fetch multiple endpoints at the same time.
 
 ### Would you nominate this as an example project?
-Yes. It uses only the standard library, handles errors correctly, separates concerns cleanly, and implements a working client-server event.
+Yes. It demonstrates several key principles that make it a good reference:
+
+- **Zero dependencies** — built entirely with the Go standard library, no external packages
+- **Clean structure** — concerns are separated into `models`, `api`, `handlers` with `main.go` only handling routing
+- **Explicit concurrency** — goroutines and `sync.WaitGroup` are used intentionally, not just relied on implicitly
+- **Full error coverage** — every possible failure point returns the correct HTTP status code
+- **Real client-server event** — not just a page link, but a live `fetch()` request to a Go JSON endpoint that responds without a page reload
+- **Tested** — unit tests exist and pass
+
+Any of these points alone is good practice. All of them together in a single project built from scratch makes it worth nominating.
