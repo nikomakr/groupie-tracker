@@ -78,7 +78,31 @@ Base URL: `https://groupietrackers.herokuapp.com/api`
 }
 ```
 
+## Project Structure
+
+```
+groupie-tracker/
+├── cmd/
+│   └── server/
+│       └── main.go                          # Entry point — routing, server startup
+├── internal/
+│   ├── api/
+│   │   ├── client.go                        # HTTP client, API fetch functions, Contains helper
+│   │   └── client_test.go                   # Unit tests for the api package
+│   ├── handlers/
+│   │   └── handlers/
+│   │       └── handlers.go                  # Exported HTTP handler functions
+│   └── models/
+│       └── models.go                        # Data model structs
+├── templates/
+│   ├── index.html                           # Homepage — artist card grid
+│   └── artist.html                          # Artist detail page
+└── go.mod
+```
+
 ## Data Models
+
+Defined in `internal/models/models.go`:
 
 ```go
 type Artist struct {
@@ -124,16 +148,41 @@ type RelationsIndex struct {
 
 ## API Client
 
-The `internal/api` package exposes four functions, one per endpoint:
+Defined in `internal/api/client.go`. All requests go through a shared `http.Client` with a 15-second timeout.
+
+### Individual endpoint functions
 
 ```go
-api.GetArtists()   // returns []models.Artist
-api.GetLocations() // returns models.LocationsIndex
-api.GetDates()     // returns models.DatesIndex
-api.GetRelations() // returns models.RelationsIndex
+api.GetArtists()   // returns ([]models.Artist, error)
+api.GetLocations() // returns (models.LocationsIndex, error)
+api.GetDates()     // returns (models.DatesIndex, error)
+api.GetRelations() // returns (models.RelationsIndex, error)
 ```
 
 Each function makes a GET request, reads the response body, unmarshals the JSON into the corresponding struct, and returns the data or an error.
+
+### Concurrent batch fetch
+
+```go
+api.GetAllData() // returns ([]models.Artist, LocationsIndex, DatesIndex, RelationsIndex, error)
+```
+
+`GetAllData` fetches all four endpoints concurrently using goroutines and a `sync.WaitGroup`. If any request fails, the first error is returned and the remaining results are discarded. Used by the artist detail handler to reduce total latency.
+
+### Search helper
+
+```go
+api.Contains(s, substr string) bool
+```
+
+Case-insensitive substring check. Used by the search handler to match artist names and member names against the query string.
+
+## HTTP Handlers
+
+Handler logic lives in two places:
+
+- **`internal/handlers/handlers/handlers.go`** — exported handler functions (`IndexHandler`, `ArtistHandler`, `SearchHandler`) and their page data structs (`PageData`, `ArtistPageData`). `ArtistHandler` uses `api.GetAllData()` to fetch all four endpoints concurrently.
+- **`cmd/server/main.go`** — wires routes to handlers and starts the server on `:8080`.
 
 ## Client-Server Event — Live Search
 
@@ -142,8 +191,8 @@ The search bar on the homepage is the implemented client-server event.
 **Flow:**
 1. User types in the search input (keyboard event)
 2. Browser sends `GET /search?q=<query>` to the Go server
-3. Server searches all artists by name and members (case-insensitive)
-4. Server responds with JSON array of matching artists
+3. Server calls `api.GetArtists()` and filters results using `api.Contains()` (case-insensitive match on artist name and each member name)
+4. Server responds with a JSON array of matching artists
 5. Browser renders results as a dropdown — no page reload
 
 **Why this qualifies as a client-server event:**
@@ -169,14 +218,16 @@ The client (browser) triggers an action (typing), which sends a request to the s
 ## Progress
 
 - [x] Project initialised — `go.mod` created
-- [x] Data models defined — structs for Artist, Location, Date, Relation
-- [x] API client — all four endpoints fetched and verified
-- [x] HTTP server — routing, handlers, error handling
-- [x] Homepage — artist card grid with dark theme
-- [x] Artist detail page — members, dates, locations, relation table
+- [x] Data models defined — structs for Artist, Location, Date, Relation (`internal/models/models.go`)
+- [x] API client — all four endpoints fetched and verified (`internal/api/client.go`)
+- [x] Concurrent fetch — `GetAllData` fetches all four endpoints in parallel with goroutines
+- [x] Search helper — `Contains` case-insensitive substring match in `internal/api`
+- [x] HTTP server — routing, handlers, error handling (`cmd/server/main.go`)
+- [x] Handlers refactored — exported `IndexHandler`, `ArtistHandler`, `SearchHandler` in `internal/handlers/handlers`
+- [x] Homepage — artist card grid with dark theme (`templates/index.html`)
+- [x] Artist detail page — members, dates, locations, relation table (`templates/artist.html`)
 - [x] Client-server event — live search via `/search?q=`
-- [x] Unit tests — `Contains` function tested
-- [x] Refactor handlers into `internal/handlers` package
+- [x] Unit tests — `TestContains` and `TestContainsEmpty` in `internal/api/client_test.go`
 
 ## Usage
 
