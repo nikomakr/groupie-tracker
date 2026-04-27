@@ -108,7 +108,7 @@ Doug Fogie
 ### First album for Gorillaz — does it show the right date?
 Navigate to `http://localhost:8080/artist?id=2`. The First Album field displays:
 ```
-05-06-2002
+26-03-2001
 ```
 
 Alternatively, you can run the following command:
