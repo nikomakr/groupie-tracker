@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: groupie-tracker
+    runtime: go
+    buildCommand: go build -o server ./cmd/server
+    startCommand: ./server
+    envVars:
+      - key: PORT
+        generateValue: false
