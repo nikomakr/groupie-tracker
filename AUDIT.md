@@ -256,6 +256,9 @@ All four goroutines run in parallel. `wg.Wait()` blocks until all four finish. T
 
 On the client side, the search event uses `fetch()` which is non-blocking — the browser sends the request and continues running without freezing the page.
 
+### Is the site hosted/deployed? Can you access the website through a DNS (Domain Name System)?
+
+`` go run cmd/server/main.go `` → http://localhost:8080
 
 ## Basic
 
