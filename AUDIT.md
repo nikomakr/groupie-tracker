@@ -258,7 +258,13 @@ On the client side, the search event uses `fetch()` which is non-blocking — th
 
 ### Is the site hosted/deployed? Can you access the website through a DNS (Domain Name System)?
 
-`` go run cmd/server/main.go `` → http://localhost:8080
+Yes. The site is deployed on Render and publicly accessible at:
+
+https://groupie-tracker-h5ic.onrender.com/
+
+Deployed from the `main` branch of https://github.com/nikomakr/groupie-tracker. Render builds and runs the server automatically on every push.
+
+For local development: `go run cmd/server/main.go` → http://localhost:8080
 
 ## Basic
 
